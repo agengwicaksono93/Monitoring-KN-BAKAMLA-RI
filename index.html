@@ -185,6 +185,43 @@
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
+    // Fungsi konversi Decimal Degree → DMS
+    function toDMS(dec, isLat = true) {
+    const dir = dec >= 0 ? (isLat ? "N" : "E") : (isLat ? "S" : "W");
+   const absVal = Math.abs(dec);
+    const deg = Math.floor(absVal);
+    const minFull = (absVal - deg) * 60;
+    const min = Math.floor(minFull);
+    const sec = ((minFull - min) * 60).toFixed(2);
+    return `${deg}° ${min}' ${sec}" ${dir}`;
+    }
+
+
+    // Custom control koordinat di pojok kanan atas
+    const coordControl = L.control({ position: "topright" });
+
+    coordControl.onAdd = function () {
+    const div = L.DomUtil.create("div", "leaflet-bar");
+    div.style.background = "#fff";
+    div.style.padding = "4px 8px";
+    div.style.fontSize = "12px";
+    div.style.fontFamily = "monospace";
+    div.style.color = "#003366";
+    div.innerHTML = "Koordinat: -";
+   return div;
+    };
+
+    coordControl.addTo(map);
+
+    // Update isi koordinat saat mouse bergerak di peta
+    map.on("mousemove", function (e) {
+    const { lat, lng } = e.latlng;
+    coordControl.getContainer().innerHTML =
+    `Koordinat:<br>${toDMS(lat, true)}, ${toDMS(lng, false)}`;
+    });
+
+
+
     const markers = {};
     const shipList = document.getElementById("shipList");
     const logFilter = document.getElementById("logFilter");
