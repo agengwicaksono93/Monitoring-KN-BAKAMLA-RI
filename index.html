@@ -185,6 +185,49 @@
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
+    // === Tambahkan setelah tileLayer ===
+
+    // Fungsi bikin grid lintang-bujur
+    function drawGrid(interval) {
+   var bounds = map.getBounds();
+    var minLat = Math.floor(bounds.getSouth());
+    var maxLat = Math.ceil(bounds.getNorth());
+    var minLng = Math.floor(bounds.getWest());
+    var maxLng = Math.ceil(bounds.getEast());
+
+    // Garis lintang (horizontal)
+    for (var lat = minLat; lat <= maxLat; lat += interval) {
+    L.polyline([
+      [lat, minLng],
+      [lat, maxLng]
+    ], {color: "black", weight: 0.4, opacity: 0.5}).addTo(map);
+    }
+
+   // Garis bujur (vertikal)
+   for (var lng = minLng; lng <= maxLng; lng += interval) {
+    L.polyline([
+      [minLat, lng],
+      [maxLat, lng]
+    ], {color: "black", weight: 0.4, opacity: 0.5}).addTo(map);
+    }
+    }
+
+    // Gambar grid awal (tiap 5 derajat)
+    drawGrid(1);
+
+    // Update grid saat zoom atau geser peta
+    map.on("moveend", function() {
+   // Hapus garis lama
+   map.eachLayer(function(layer) {
+    if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
+      if (!layer._url) { // biar tile layer OSM gak kehapus
+        map.removeLayer(layer);
+      }
+    }
+   });
+    drawGrid(1);
+    });
+
     // Fungsi konversi Decimal Degree → DMS
     function toDMS(dec, isLat = true) {
     const dir = dec >= 0 ? (isLat ? "N" : "E") : (isLat ? "S" : "W");
