@@ -38,6 +38,27 @@
     .log-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     select { padding: 4px; }
 
+  .grid-label {
+   background: rgba(255,255,255,0.8);
+   padding: 1px 4px;
+   border-radius: 3px;
+   font-size: 11px;
+   font-family: Arial, sans-serif;
+   border: 1px solid #333;
+   pointer-events: none;
+  }
+  .control-box {
+   position: absolute;
+   bottom: 10px;   /* pojok bawah */
+   right: 10px;    /* pojok kanan */
+   z-index: 1000;
+   background: white;
+   padding: 5px;
+   border: 1px solid #ccc;
+   border-radius: 4px;
+   font-size: 13px;
+  }
+
     /* Responsive HP/Tablet */
     @media (max-width: 768px) {
       main { flex-direction: column; }
@@ -72,6 +93,15 @@
     <!-- Area peta + detail -->
     <section style="flex:1;display:flex;flex-direction:column;">
       <div id="map"></div>
+        <div class="control-box">
+          Interval Grid: 
+          <select id="intervalSelect">
+           <option value="1">1°</option>
+           <option value="5">5°</option>
+           <option value="10" selected>10°</option>
+          </select>
+        </div>
+      </div>
 
       <div class="info-panel">
         <h3>Detail Kapal</h3>
@@ -185,49 +215,6 @@
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
 
-    // === Tambahkan setelah tileLayer ===
-
-    // Fungsi bikin grid lintang-bujur
-    function drawGrid(interval) {
-   var bounds = map.getBounds();
-    var minLat = Math.floor(bounds.getSouth());
-    var maxLat = Math.ceil(bounds.getNorth());
-    var minLng = Math.floor(bounds.getWest());
-    var maxLng = Math.ceil(bounds.getEast());
-
-    // Garis lintang (horizontal)
-    for (var lat = minLat; lat <= maxLat; lat += interval) {
-    L.polyline([
-      [lat, minLng],
-      [lat, maxLng]
-    ], {color: "black", weight: 0.4, opacity: 0.5}).addTo(map);
-    }
-
-   // Garis bujur (vertikal)
-   for (var lng = minLng; lng <= maxLng; lng += interval) {
-    L.polyline([
-      [minLat, lng],
-      [maxLat, lng]
-    ], {color: "black", weight: 0.4, opacity: 0.5}).addTo(map);
-    }
-    }
-
-    // Gambar grid awal (tiap 5 derajat)
-    drawGrid(1);
-
-    // Update grid saat zoom atau geser peta
-    map.on("moveend", function() {
-   // Hapus garis lama
-   map.eachLayer(function(layer) {
-    if (layer instanceof L.Polyline && !(layer instanceof L.Polygon)) {
-      if (!layer._url) { // biar tile layer OSM gak kehapus
-        map.removeLayer(layer);
-      }
-    }
-   });
-    drawGrid(1);
-    });
-
     // Fungsi konversi Decimal Degree → DMS
     function toDMS(dec, isLat = true) {
     const dir = dec >= 0 ? (isLat ? "N" : "E") : (isLat ? "S" : "W");
@@ -290,6 +277,82 @@
       opt.textContent = ship.name;
       logFilter.appendChild(opt);
     });
+
+    var gridLayer = L.layerGroup().addTo(map);
+
+    function formatLat(lat) {
+      if (lat > 0) return lat + "°N";
+      if (lat < 0) return Math.abs(lat) + "°S";
+      return "0°";
+    }
+    function formatLng(lng) {
+     if (lng > 0) return lng + "°E";
+      if (lng < 0) return Math.abs(lng) + "°W";
+      return "0°";
+    }
+
+    function drawGrid(interval) {
+      gridLayer.clearLayers();
+      let bounds = map.getBounds();
+      let latTop = bounds.getNorth() - 0.5;
+      let lngLeft = bounds.getWest() + 0.5;
+
+      // Garis bujur + label atas
+      for (let lng = -180; lng <= 180; lng += interval) {
+       L.polyline([[-90, lng], [90, lng]], { color: "black", weight: 0.4 }).addTo(gridLayer);
+        L.marker([latTop, lng], {
+          icon: L.divIcon({
+         className: "grid-label",
+         html: formatLng(lng),
+         iconSize: [40, 14]
+          })
+        }).addTo(gridLayer);
+      }
+
+       // Garis lintang + label kiri
+      for (let lat = -90; lat <= 90; lat += interval) {
+       L.polyline([[lat, -180], [lat, 180]], { color: "black", weight: 0.4 }).addTo(gridLayer);
+        L.marker([lat, lngLeft], {
+          icon: L.divIcon({
+          className: "grid-label",
+          html: formatLat(lat),
+         iconSize: [40, 14]
+         })
+        }).addTo(gridLayer);
+      }
+    }
+
+    function refreshGrid() {
+      let interval = parseInt(document.getElementById("intervalSelect").value);
+     drawGrid(interval);
+    }
+
+    map.on("moveend", refreshGrid);
+    document.getElementById("intervalSelect").addEventListener("change", refreshGrid);
+    refreshGrid();
+
+    // Default aktif
+    gridLayer.addTo(map);
+
+    // ======== Tombol Toggle ========
+    var toggleControl = L.control({ position: "topright" });
+    toggleControl.onAdd = function () {
+      var div = L.DomUtil.create("div", "leaflet-control-layers-togglegrid");
+      div.innerHTML = "Grid: ON";
+      div.style.userSelect = "none";
+
+      L.DomEvent.on(div, "click", function (e) {
+        if (map.hasLayer(gridLayer)) {
+          map.removeLayer(gridLayer);
+          div.innerHTML = "Grid: OFF";
+        } else {
+          map.addLayer(gridLayer);
+          div.innerHTML = "Grid: ON";
+        }
+      });
+      return div;
+    };
+    toggleControl.addTo(map);
 
     // ==========================================
     // 4) CHART
