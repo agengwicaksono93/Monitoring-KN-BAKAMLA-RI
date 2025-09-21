@@ -299,7 +299,7 @@
 
       // Garis bujur + label atas
       for (let lng = -180; lng <= 180; lng += interval) {
-       L.polyline([[-90, lng], [90, lng]], { color: "black", weight: 0.4 }).addTo(gridLayer);
+       L.polyline([[-90, lng], [90, lng]], { color: "black", weight: 0.2 }).addTo(gridLayer);
         L.marker([latTop, lng], {
           icon: L.divIcon({
          className: "grid-label",
@@ -311,7 +311,7 @@
 
        // Garis lintang + label kiri
       for (let lat = -90; lat <= 90; lat += interval) {
-       L.polyline([[lat, -180], [lat, 180]], { color: "black", weight: 0.4 }).addTo(gridLayer);
+       L.polyline([[lat, -180], [lat, 180]], { color: "black", weight: 0.2 }).addTo(gridLayer);
         L.marker([lat, lngLeft], {
           icon: L.divIcon({
           className: "grid-label",
