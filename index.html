@@ -295,7 +295,7 @@
       gridLayer.clearLayers();
       let bounds = map.getBounds();
       let latTop = bounds.getNorth() - 0.5;
-      let lngLeft = bounds.getWest() + 0.5;
+      let lngLeft = bounds.getWest() + 1;
 
       // Garis bujur + label atas
       for (let lng = -180; lng <= 180; lng += interval) {
