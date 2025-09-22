@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <!-- PapaParse (parser CSV) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <!-- SheetJS (untuk ekspor Excel lokal) -->
@@ -186,16 +187,16 @@
     // 1) DATA AWAL KAPAL (akan diupdate dari Sheet)
     // ==========================================
     const ships = [
-      { id: 1, name: "KN TANJUNG DATU 1101", lat: -6.2, lng: 106.8, fuel: 8000, water: 3000, lube: 1200, crew: 40 },
-      { id: 2, name: "KN PULAU NIPAH 321",   lat: -5.8, lng: 107.0, fuel: 6000, water: 2500, lube: 1000, crew: 35 },
-      { id: 3, name: "KN PULAU MARORE 322",   lat: -6.4, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id: 4, name: "KN PULAU DANA 323",     lat: -6.0, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id: 5, name: "KN BINTANG LAUT 401",   lat: -5.5, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id: 6, name: "KN SINGA LAUT 402",     lat: -6.9, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id: 7, name: "KN KUDA LAUT 403",      lat: -5.1, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id: 8, name: "KN GAJAH LAUT 404",     lat: -5.9, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id: 9, name: "KN ULAR LAUT 405",      lat: -4.7, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 },
-      { id:10, name: "KN BELUT LAUT 406",     lat: -4.4, lng: 107.2, fuel: 9000, water: 3500, lube: 1400, crew: 45 }
+      { id: 1, name: "KN TANJUNG DATU 1101", lat: -6.2, lng: 106.8, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 313200, water: 100000, lube: 5000 } },
+      { id: 2, name: "KN PULAU NIPAH 321",   lat: -5.8, lng: 107.0, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 353290, water: 100000, lube: 5420 } },
+      { id: 3, name: "KN PULAU MARORE 322",   lat: -6.4, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 353290, water: 100000, lube: 5420 } },
+      { id: 4, name: "KN PULAU DANA 323",     lat: -6.0, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 353290, water: 100000, lube: 5420 } },
+      { id: 5, name: "KN BINTANG LAUT 401",   lat: -5.5, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 71250, water: 100000, lube: 300 } },
+      { id: 6, name: "KN SINGA LAUT 402",     lat: -6.9, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 61100, water: 100000, lube: 2000 } },
+      { id: 7, name: "KN KUDA LAUT 403",      lat: -5.1, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 44074, water: 100000, lube: 1450 } },
+      { id: 8, name: "KN GAJAH LAUT 404",     lat: -5.9, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 51200, water: 100000, lube: 300 } },
+      { id: 9, name: "KN ULAR LAUT 405",      lat: -4.7, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 71250, water: 100000, lube: 300 } },
+      { id:10, name: "KN BELUT LAUT 406",     lat: -4.4, lng: 107.2, fuel: 1000, water: 1000, lube: 100, crew: 1, capacity: { fuel: 67876, water: 100000, lube: 600 } }
     ];
 
     // ==========================================
@@ -357,18 +358,57 @@
     // ==========================================
     // 4) CHART
     // ==========================================
+    
+    // -------------------------------------
+    // ChartJS: stacked bar (isi + kosong)
+    // -------------------------------------
     const ctx = document.getElementById("supplyChart").getContext("2d");
     const supplyChart = new Chart(ctx, {
       type: "bar",
       data: {
         labels: ["Bahan Bakar", "Air Tawar", "Minyak Pelumas"],
-        datasets: [{
-          label: "Ketersediaan (Liter)",
-          data: [0, 0, 0],
-          backgroundColor: ["#2563eb", "#0ea5e9", "#f59e0b"]
-        }]
+        datasets: [
+          {
+           label: "Ketersediaan",
+            data: [0, 0, 0], // akan diisi oleh updateShipDetails()
+           backgroundColor: ["#2563eb", "#0ea5e9", "#f59e0b"],
+           // letakkan ketersediaan sebagai dataset pertama agar tampil di BOTTOM
+            borderWidth: 0
+          },
+          {
+           label: "Kosong",
+           data: [0, 0, 0], // kapasitas - ketersediaan
+           backgroundColor: "rgba(180,180,180,0.6)",
+            borderWidth: 0
+          }
+        ]
       },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      options: {
+        responsive: true,
+        plugins: {
+        legend: { position: "bottom" },
+        datalabels: {
+        color: "#000",
+        anchor: "center",
+        align: "center",
+        font: { weight: "bold", size: 11 },
+        formatter: (value, context) => {
+          // tampilkan persentase hanya untuk dataset "Ketersediaan"
+          if (context.dataset.label !== "Ketersediaan") return "";
+          const datasets = context.chart.data.datasets;
+          const total = datasets.reduce((sum, ds) => sum + (ds.data[context.dataIndex] || 0), 0);
+          if (!total) return "";
+          const pct = Math.round( (value / total) * 100 );
+          return pct + "%";
+        }
+        }
+        },
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true } // total bar = kapasitas
+        }
+      },
+        plugins: [ChartDataLabels] // daftarkan plugin
     });
 
     // ==========================================
@@ -391,19 +431,33 @@
 
     function updateShipDetails(ship) {
       if (!ship) return;
+
+      // tampilkan info di panel
       document.getElementById("shipName").textContent = ship.name;
       document.getElementById("shipPosition").textContent = `${ship.lat.toFixed(4)}, ${ship.lng.toFixed(4)}`;
-      document.getElementById("shipFuel").textContent = ship.fuel + " L";
-      document.getElementById("shipWater").textContent = ship.water + " L";
-      document.getElementById("shipLube").textContent = ship.lube + " L";
-      document.getElementById("shipCrew").textContent = ship.crew + " orang";
 
-      document.getElementById("inputFuel").value = ship.fuel;
-      document.getElementById("inputWater").value = ship.water;
-      document.getElementById("inputLube").value = ship.lube;
-      document.getElementById("inputCrew").value = ship.crew;
+      // pastikan capacity ada
+      const capFuel = ship.capacity?.fuel ?? 0;
+      const capWater = ship.capacity?.water ?? 0;
+      const capLube = ship.capacity?.lube ?? 0;
 
-      supplyChart.data.datasets[0].data = [ship.fuel, ship.water, ship.lube];
+      // clamp ketersediaan supaya tidak melebihi kapasitas
+      const fuelAvail = Math.min(Number(ship.fuel) || 0, capFuel);
+      const waterAvail = Math.min(Number(ship.water) || 0, capWater);
+      const lubeAvail = Math.min(Number(ship.lube) || 0, capLube);
+
+      const fuelEmpty = Math.max(0, capFuel - fuelAvail);
+      const waterEmpty = Math.max(0, capWater - waterAvail);
+      const lubeEmpty = Math.max(0, capLube - lubeAvail);
+
+      document.getElementById("shipFuel").textContent = `${fuelAvail} L / ${capFuel} L`;
+      document.getElementById("shipWater").textContent = `${waterAvail} L / ${capWater} L`;
+      document.getElementById("shipLube").textContent = `${lubeAvail} L / ${capLube} L`;
+      document.getElementById("shipCrew").textContent = (ship.crew || 0) + " orang";
+
+      // isi Chart (dataset[0] = Ketersediaan, dataset[1] = Kosong)
+      supplyChart.data.datasets[0].data = [fuelAvail, waterAvail, lubeAvail];
+      supplyChart.data.datasets[1].data = [fuelEmpty, waterEmpty, lubeEmpty];
       supplyChart.update();
     }
 
